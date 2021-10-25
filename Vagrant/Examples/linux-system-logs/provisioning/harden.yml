@@ -1,0 +1,8 @@
+---
+- name: harden clients to generate better logging
+  hosts: clients
+  collections:
+    - devsec.hardening
+  roles:
+    - devsec.hardening.os_hardening
+

@@ -1,0 +1,12 @@
+---
+roles:
+  # This role is used to install filebeat
+  - name: elastic.beats
+    version: v7.14.0
+
+  # This role is used to ensure clients point to Humio for time
+  - name: geerlingguy.ntp
+
+collections:
+  # A collection of hardening utilities
+  - name: devsec.hardening

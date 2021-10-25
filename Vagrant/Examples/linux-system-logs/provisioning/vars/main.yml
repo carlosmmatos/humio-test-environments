@@ -1,0 +1,91 @@
+---
+# Generic
+humio_url: 10.1.1.2:8080
+#ntp_server: "<IP ADDRESS|HOSTNAME for NTP SERVER>"
+#ingest_token: ""
+
+# NTP ROLE
+ntp_manage_config: true
+ntp_servers:
+  - "{{ ntp_server|default('10.1.1.2') }} iburst"
+
+# Filebeat (elastic.beats role)
+beats_version: 7.15.0
+beat: filebeat
+oss_version: true
+filebeat_log_level: warning
+filebeat_log_dir: /var/log/mybeat
+filebeat_log_filename: mybeat.log
+# Conf file
+beat_conf:
+  filebeat:
+    config:
+      modules:
+        enabled: true
+        path: modules.d/*.yml
+    modules:
+      - module: auditd
+        log:
+          enabled: true
+          input:
+            fields:
+              type: linux-filebeat
+              fb_module: auditd
+      - module: system
+        syslog:
+          enabled: true
+          input:
+            fields:
+              type: linux-filebeat
+              fb_module: system
+        auth:
+          enabled: true
+          input:
+            fields:
+              type: linux-filebeat
+              fb_module: system
+    # inputs:
+    #   - type: log
+    #     enabled: true
+    #     fields:
+    #       type: multiline
+    #     paths:
+    #       - /etc/**
+    #       - /home/*/\.*_history
+    #       - /root/\.*_history
+    #       - /var/adm/*
+    #     multiline:
+    #       pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+    #       negate: true
+    #       match: after
+
+  queue:
+    mem:
+      events: 8000
+      flush.min_events: 1000
+      flush.timeout: 1s
+
+output_conf:
+  elasticsearch:
+    hosts:
+      - "{{ humio_url }}/api/v1/ingest/elastic-bulk"
+    username: integrator
+    password: "{{ ingest_token | mandatory }}"
+    compression_level: 5
+    bulk_max_size: 200
+    worker: 5
+
+logging_conf:
+    ### Filebeat log
+    level: "{{ filebeat_log_level }}"
+
+    # Enable file rotation with default configuration
+    to_files: true
+
+    # Do not log to syslog
+    to_syslog: false
+
+    files:
+      path: "{{ filebeat_log_dir }}"
+      name: "{{ filebeat_log_filename }}"
+      keepfiles: 3

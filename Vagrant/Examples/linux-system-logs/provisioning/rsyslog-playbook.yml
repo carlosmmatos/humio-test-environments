@@ -1,0 +1,58 @@
+---
+# Ansible playbook for setting up humio rsyslog clients
+#
+# @author Carlos Matos
+
+- name: configure humio clients for transporting rsyslog data
+  hosts: clients
+  any_errors_fatal: true
+  vars_files:
+    - vars/main.yml
+  collections:
+    - devsec.hardening
+  pre_tasks:
+    - name: update apt-cache
+      apt:
+        update_cache: yes
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+    - name: include role to configure ntp
+      include_role:
+        name: geerlingguy.ntp
+      tags: ntp
+
+  tasks:
+    - name: ensure rsyslog-elasticsearch plugin installed
+      package:
+        name: rsyslog-elasticsearch
+        state: present
+      tags: rsyslog
+
+    - name: ensure rsyslog-mmjsonparse plugin installed (non-ubuntu)
+      package:
+        name: rsyslog-mmjsonparse
+        state: present
+      when: ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu'
+      tags: rsyslog
+
+    - name: template humio rsyslog config file
+      template:
+        src: templates/33-humio.conf.j2
+        dest: /etc/rsyslog.d/33-humio.conf
+      tags: rsyslog
+      notify:
+        - restart rsyslog
+
+  handlers:
+    - name: restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted
+        enabled: yes
+      tags: rsyslog
+
+  post_tasks:
+    - name: include role to harden clients
+      include_role:
+        name: devsec.hardening.os_hardening
+      tags: harden

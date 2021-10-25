@@ -1,0 +1,44 @@
+module(load="omelasticsearch")
+
+template(name="humiotemplate" type="list" option.json="on") {
+  constant(value="{")
+    constant(value="\"@timestamp\":\"") property(name="timereported" dateFormat="rfc3339")
+    constant(value="\",\"message\":\"") property(name="msg")
+    constant(value="\",\"host\":\"") property(name="hostname")
+    constant(value="\",\"severity\":\"") property(name="syslogseverity-text")
+    constant(value="\",\"facility\":\"") property(name="syslogfacility-text")
+    constant(value="\",\"syslogtag\":\"") property(name="syslogtag")
+    constant(value="\",\"name\":\"") property(name="programname")
+    constant(value="\",\"pid\":\"") property(name="procid")
+  constant(value="\"}")
+}
+################## How to Forward Journald Logs ##################
+{# {% if ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' -%}
+# module that reads from journal
+module(load="imjournal"
+ StateFile="/var/run/journal.state" # we write here where we left off
+ PersistStateInterval="100" # update the state file every 100 messages
+)
+{% endif -%}
+
+# journal entries are read as JSON, we'll need this to parse them
+module(load="mmjsonparse")
+# Elasticsearch or Sematext Cloud HTTP output
+module(load="omelasticsearch")
+
+# this is done on every message (i.e. parses the JSON)
+action(type="mmjsonparse")
+
+# output template that simply writes the parsed JSON
+template(name="all-json" type="list"){
+ property(name="$!all-json")
+} #}
+##################################################################
+*.* action(type="omelasticsearch"
+  server="{{ humio_url }}:{{ elastic_port }}/api/v1/ingest/elastic-bulk"
+  template="all-json"
+  uid="any-organization"
+  pwd="{{ ingest_token | mandatory }}"
+  bulkmode="on"
+  usehttps="off"
+)

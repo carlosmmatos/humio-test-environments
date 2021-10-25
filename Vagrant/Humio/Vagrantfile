@@ -1,0 +1,37 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  config.vm.define "humio" do |humio|
+    ### Customize Specs (VB only) ###
+    humio.vm.provider "virtualbox" do |vb|
+      vb.check_guest_additions = false
+      vb.memory = 8192
+      vb.cpus = 4
+    end
+
+    # VM config
+    humio.vm.hostname = "humio"
+    humio.vm.network "private_network", ip: "10.1.1.2"
+    # This is a custom box with docker pre-installed based on ubuntu
+    humio.vm.box = "carlosmmatos/dockerhost"
+
+    # Docker provisioning
+    humio.vm.provision "docker" do |d|
+      d.run "humio/humio",
+        daemonize: true,
+        args: %W[
+          --pull always
+          -v /vagrant/mounts/data:/data
+          -v /vagrant/mounts/kafka-data:/data/kafka-data
+          -v /vagrant/etc:/etc/humio:ro
+          -p 8080:8080
+          -p 9200:9200
+          --name=humio
+          --ulimit='nofile=8192:8192'
+          --env-file=/vagrant/humio.conf].join(' ')
+    end
+  end
+
+end

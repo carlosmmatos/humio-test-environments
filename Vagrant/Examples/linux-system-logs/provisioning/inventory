@@ -1,0 +1,11 @@
+humio ansible_host=10.1.1.2
+centos ansible_host=10.1.1.3
+ubuntu ansible_host=10.1.1.4
+fedora ansible_host=10.1.1.5
+kali ansible_host=10.1.1.6
+
+[clients]
+centos
+ubuntu
+fedora
+

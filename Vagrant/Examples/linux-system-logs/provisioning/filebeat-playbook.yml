@@ -1,0 +1,25 @@
+---
+# Ansible playbook for setting up humio filebeat clients
+#
+# @author Carlos Matos
+
+- name: configure humio clients with filebeat
+  hosts: clients
+  any_errors_fatal: true
+  vars_files:
+    - vars/main.yml
+  collections:
+    - devsec.hardening
+  pre_tasks:
+    - name: update apt-cache
+      apt:
+        update_cache: yes
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+  roles:
+    # SEE ROLE VARS IN vars/main.yml
+    - role: geerlingguy.ntp
+      tags: ntp
+    - role: elastic.beats
+      tags: beats
+    - role: devsec.hardening.os_hardening
+      tags: harden
